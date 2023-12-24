@@ -1,9 +1,7 @@
 import hashlib
 import secrets
 import time
-from scipy.stats import uniform, t, norm, randint
 
-import matplotlib.pyplot as plt
 import numpy as np
 from statistics import stdev, mean
 import random
@@ -51,21 +49,34 @@ def convertHexToBin(hex, n):
     return "0" * (k - len(binStr)) + binStr
 
 
-# 0cc7f5ed
+
+
+import concurrent.futures
+
+def buildTableEntry(i, L, n):
+    xi0 = generateHex(n)
+    xij = xi0
+    for j in range(0, L):
+        xij = h(toBytes(R(xij, n)), n)
+    return (xi0, xij)
+
+
+def buildTablePrecalculationEntry(i, L, n):
+    return buildTableEntry(i, L, n)
+
+
 def buildTablePrecalculation(K, L, n):
     arr = np.array([("", "")] * K, dtype=object)
 
-    for i in range(0, K):
-        xi0 = generateHex(n)
-        xij = xi0
-        for j in range(0, L):
-            xij = h(toBytes(R(xij, n)), n)
-        arr[i] = (xi0, xij)
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = list(executor.map(buildTablePrecalculationEntry, range(K), [L] * K, [n] * K))
+
+    for i, result in enumerate(results):
+        arr[i] = result
         if i % 100000 == 0:
             print(i, K)
+
     return arr
-
-
 # def buildAttack(table, ha, L, K, n):
 #     y = ha
 #     b = False
@@ -129,9 +140,17 @@ def buildAndSave(K, L, n, filename1):
     save_table_to_file(table, filename1)
     print(table)
     return table
+# def buildAndSave(K, L, n, filename1, num_processes=10):
+#     start_time = time.time()
+#     table = buildTablePrecalculation(K, L, n, num_processes)
+#     end_time = time.time()
+#     execution_time = end_time - start_time
+#     print(f"Time to build the table: {execution_time} seconds:", filename1)
+#     save_table_to_file(table, filename1)
+#     print(table)
+#     return table
 
-
-def results(table, K, L):
+def results(table, K, L,n):
     index_dict = {table[i][1]: i for i in range(K)}
     s = 0
     for _ in range(10_000):
@@ -147,78 +166,48 @@ def results(table, K, L):
             if has == h(toBytes(x), n):
                 s += 1
                 print("peremoh")
-                break
+
     print(f"кількість успіхів: {s}, Pr:{s / 10000}")
     print(f"кількість невдач: {10000 - s}")
 
+if __name__ == '__main__':
+    print("1")
+    print(load_table_from_file("tab00.pkl"))
+    K01 = 2 ** 20
+    L01 = 2 ** 10
+    tab01 = buildAndSave(K01, L01, 32, "tab01.pkl")
 
-# K00 = 2 ** 20
-# L00 = 2 ** 10
-# tab00 = buildAndSave(K00, L00, 32, "tab00.pkl")
-print("1")
-print(load_table_from_file("tab00.pkl"))
-K01 = 2 ** 20
-L01 = 2 ** 11
-tab01 = buildAndSave(K01, L01, 32, "tab01.pkl")
+    print("4")
+    K02 = 2 ** 20
+    L02 = 2 ** 12
+    tab02 = buildAndSave(K02, L02, 32, "tab02.pkl")
+    print("7")
 
-print("4")
-K02 = 2 ** 20
-L02 = 2 ** 12
-tab02 = buildAndSave(K02, L02, 32, "tab02.pkl")
-print("7")
+    K11 = 2 ** 22
+    L11 = 2 ** 11
+    tab11 = buildAndSave(K11, L11, 32, "tab11.pkl")
+    print("5")
 
-K11 = 2 ** 22
-L11 = 2 ** 11
-tab11 = buildAndSave(K11, L11, 32, "tab11.pkl")
-print("5")
+    K10 = 2 ** 22
+    L10 = 2 ** 10
+    tab10 = buildAndSave(K10, L10, 32, "tab10.pkl")
+    print("2")
 
-K10 = 2 ** 22
-L10 = 2 ** 10
-tab10 = buildAndSave(K10, L10, 32, "tab10.pkl")
-print("2")
+    K12 = 2 ** 22
+    L12 = 2 ** 12
+    tab12 = buildAndSave(K12, L12, 32, "tab12.pkl")
+    print("8")
 
-K12 = 2 ** 22
-L12 = 2 ** 12
-tab12 = buildAndSave(K12, L12, 32, "tab12.pkl")
-print("8")
+    K20 = 2 ** 24
+    L20 = 2 ** 10
+    tab20 = buildAndSave(K20, L20, 32, "tab20.pkl")
+    print("3")
 
-K20 = 2 ** 24
-L20 = 2 ** 10
-tab20 = buildAndSave(K20, L20, 32, "tab20.pkl")
-print("3")
+    K21 = 2 ** 24
+    L21 = 2 ** 11
+    tab21 = buildAndSave(K21, L21, 32, "tab21.pkl")
+    print("6")
 
-K21 = 2 ** 24
-L21 = 2 ** 11
-tab21 = buildAndSave(K21, L21, 32, "tab21.pkl")
-print("6")
-
-K22 = 2 ** 24
-L22 = 2 ** 12
-tab22 = buildAndSave(K22, L22, 32, "tab22.pkl")
-
-# print(f"K = {K00}, L = {L00}")
-# results(tab00, K00, L00)
-#
-# print(f"K = {K10}, L = {L10}")
-# results(tab10, K10, L10)
-#
-# print(f"K = {K20}, L = {L20}")
-# results(tab20, K20, L20)
-#
-# print(f"K = {K01}, L = {L01}")
-# results(tab01, K01, L01)
-#
-# print(f"K = {K11}, L = {L11}")
-# results(tab11, K11, L11)
-#
-# print(f"K = {K21}, L = {L21}")
-# results(tab21, K21, L21)
-#
-# print(f"K = {K02}, L = {L02}")
-# results(tab02, K02, L02)
-#
-# print(f"K = {K12}, L = {L12}")
-# results(tab12, K12, L12)
-#
-# print(f"K = {K22}, L = {L22}")
-# results(tab22, K22, L22)
+    K22 = 2 ** 24
+    L22 = 2 ** 12
+    tab22 = buildAndSave(K22, L22, 32, "tab22.pkl")
